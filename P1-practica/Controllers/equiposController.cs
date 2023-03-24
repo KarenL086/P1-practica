@@ -20,8 +20,14 @@ namespace P1_practica.Controllers
         [Route("GetAll")]
         public IActionResult Get()
         {
-            List<equipos> listadoEquipos = (from e in _equiposContexto.equipos
-                                            select e).ToList();
+            var listadoEquipos = (from e in _equiposContexto.equipos
+                                  join m in _equiposContexto.marcas on e.marca_id equals m.id_marcas
+                                  join ti in _equiposContexto.tipo_equipo on e.tipo_equipo_id equals ti.id_tipo_equipo
+                                  join ee in _equiposContexto.estados_equipo on  e.estado_equipo_id equals ee.id_estados_equipo
+                                  select new
+                                  {
+                                    e.id_equipos, e.nombre, e.descripcion, tipo_equipo = ti.descripcion, m.nombre_marca, e.modelo, e.anio_compra, e.costo, e.vida_util, ee.id_estados_equipo, e.estado
+                                  }).ToList();
 
             if(listadoEquipos.Count == 0)   
             {
@@ -34,9 +40,18 @@ namespace P1_practica.Controllers
         [Route("GetById/{id}")]
         public IActionResult Get(int id)
         {
-            equipos? equipo = (from e in _equiposContexto.equipos
+            object? equipo = (from e in _equiposContexto.equipos
+                               join m in _equiposContexto.marcas on e.marca_id equals m.id_marcas
                                where e.id_equipos == id
-                               select e).FirstOrDefault();
+                               select new
+                               {
+                                   e.id_equipos,
+                                   e.nombre,
+                                   e.descripcion,
+                                   e.tipo_equipo_id,
+                                   e.marca_id,
+                                   m.nombre_marca
+                               }).FirstOrDefault();
             if(equipo == null)
             {
                 return NotFound();
@@ -94,11 +109,28 @@ namespace P1_practica.Controllers
 
             return Ok(equipoActual);
         }
+        //No se borrara solo se actializara el estado de A a I
         [HttpDelete]
         [Route("Eliminar/{id}")]
         public IActionResult ElimiarEquipo(int id)
         {
-            equipos? equipo = (from e in _equiposContexto.equipos
+            equipos? eActual = (from e in _equiposContexto.equipos
+                              where e.marca_id == id
+                              select e).FirstOrDefault();
+            if (eActual == null)
+            {
+                return NotFound();
+            }
+
+            eActual.estado = "I";
+
+            _equiposContexto.Entry(eActual).State = EntityState.Modified;
+            _equiposContexto.SaveChanges();
+
+            return Ok(eActual);
+
+            /* codigo borrar   
+             equipos? equipo = (from e in _equiposContexto.equipos
                                where e.id_equipos == id
                                select e).FirstOrDefault();
             if(equipo == null)
@@ -110,7 +142,7 @@ namespace P1_practica.Controllers
             _equiposContexto.equipos.Remove(equipo);
             _equiposContexto.SaveChanges();
 
-            return Ok(equipo);
+            return Ok(equipo);*/
         }
     }
 }
